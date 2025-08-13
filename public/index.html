@@ -1,0 +1,465 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>FitTrack — Walk • Run • Cycle</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#111731; --muted:#93a4bf; --text:#e7ecf5; --brand:#0ea5e9; --good:#10b981; --warn:#f59e0b; --danger:#ef4444;
+      --ring: 0 0 0 3px rgba(14,165,233,.25);
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --panel:#ffffff; --muted:#54627a; --text:#0f172a; --brand:#0284c7; --good:#059669; --warn:#b45309; --danger:#b91c1c;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:linear-gradient(180deg, var(--bg), color-mix(in oklab, var(--bg) 70%, var(--panel)) 100%);
+      color:var(--text);
+    }
+    .container{max-width:1500px;margin:0 auto;padding:16px;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:40px;height:40px;border-radius:12px;background:conic-gradient(from 180deg at 50% 50%,#0ea5e9, #22d3ee,#22c55e,#f59e0b,#ef4444,#8b5cf6,#0ea5e9); box-shadow:0 10px 25px rgba(14,165,233,.25);}
+    h1{font-size:1.25rem;margin:0}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(min-width:700px){.controls{grid-template-columns:repeat(4,1fr)}}
+    .card{background:var(--panel);border:1px solid color-mix(in oklab, var(--panel) 80%, #000);border-radius:16px;padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.15)}
+    .row{display:flex;gap:10px;align-items:center}
+    label{font-size:.85rem;color:var(--muted)}
+    select,input{width:90%;padding:12px 12px;border-radius:12px;border:1px solid color-mix(in oklab, var(--panel) 70%, #000);background:transparent;color:var(--text);outline:none}
+    select:focus,input:focus{box-shadow:var(--ring);border-color:var(--brand)}
+    .btn{padding:12px 14px;border-radius:14px;border:1px solid color-mix(in oklab, var(--panel) 70%, #000);background:linear-gradient(180deg, color-mix(in oklab, var(--panel) 10%, #fff), var(--panel));color:var(--text);cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn.primary{background:linear-gradient(180deg, color-mix(in oklab, var(--brand) 60%, #fff), var(--brand));border-color:color-mix(in oklab, var(--brand) 60%, #000);}
+    .btn.warn{background:linear-gradient(180deg, color-mix(in oklab, var(--warn) 60%, #fff), var(--warn));border-color:color-mix(in oklab, var(--warn) 60%, #000);}
+    .btn.danger{background:linear-gradient(180deg, color-mix(in oklab, var(--danger) 60%, #fff), var(--danger));border-color:color-mix(in oklab, var(--danger) 60%, #000);}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:700px){.stats{grid-template-columns:repeat(6,1fr)}}
+.stat{background:var(--panel);border:1px solid color-mix(in oklab, var(--panel) 70%, #000);border-radius:16px;padding:12px}
+.stat .label{color:var(--muted);font-size:.8rem}
+.stat .value{font-size:1.6rem;font-weight:700;margin-top:6px}
+.inline{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.muted{color:var(--muted)}
+.chip{font-size:.75rem;padding:4px 8px;border-radius:999px;border:1px solid color-mix(in oklab, var(--panel) 60%, #000)}
+
+.history{margin-top:16px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px dashed color-mix(in oklab, var(--panel) 60%, #000);text-align:left}
+tr:hover{background-color:color-mix(in oklab, var(--panel) 90%, #000)}
+
+.footer{margin:28px 0;color:var(--muted);font-size:.85rem;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.badge{padding:6px 8px;border-radius:10px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);}
+.danger-badge{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35)}
+
+canvas{width:100%;height:120px;background:var(--panel);border-radius:14px;border:1px solid color-mix(in oklab, var(--panel) 70%, #000)}
+
+  </style>
+  <!-- links -->
+ <link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0ea5e9">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(() => console.log("✅ Service Worker registered"))
+      .catch(err => console.log("❌ SW registration failed", err));
+  }
+</script>
+
+</head>
+<body>
+  <div class="container" id="app">
+    <header>
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>FitTrack</h1>
+          <div class="muted" style="font-size:.85rem">Multi-activity fitness tracker — Walking • Running • Cycling</div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" id="toggle-theme" title="Toggle dark / light">🌗</button>
+        <button class="btn" id="export-json" title="Export history">⬇️ Export</button>
+      </div>
+    </header><section class="controls">
+  <div class="card">
+    <label for="activity">Activity</label>
+    <select id="activity">
+      <option value="walk">🚶 Walking</option>
+      <option value="run">🏃 Running</option>
+      <option value="cycle">🚴 Cycling</option>
+    </select>
+  </div>
+  <div class="card">
+    <label for="weight">Weight (kg)</label>
+    <input id="weight" type="number" min="25" max="250" step="0.1" placeholder="e.g., 70"/>
+  </div>
+  <div class="card">
+    <label for="gps-accuracy">Min GPS Accuracy (m)</label>
+    <input id="gps-accuracy" type="number" min="5" max="200" step="1" value="50"/>
+  </div>
+  <div class="card">
+    <label for="step-sensitivity">Step Sensitivity</label>
+    <input id="step-sensitivity" type="range" min="1" max="10" value="5"/>
+    <div class="muted" style="font-size:.8rem">Move slider if steps are under/over counted</div>
+  </div>
+</section>
+
+<section style="margin-top:14px" class="card">
+  <div class="inline" style="justify-content:space-between;">
+    <div class="inline">
+      <button class="btn primary" id="start">▶️ Start</button>
+      <button class="btn warn" id="pause" disabled>⏸️ Pause</button>
+      <button class="btn" id="resume" disabled>⏯️ Resume</button>
+      <button class="btn danger" id="stop" disabled>⏹️ Stop</button>
+    </div>
+    <div class="inline">
+      <span class="chip" id="gps-status">📍 GPS: —</span>
+      <span class="chip" id="motion-status">📱 Motion: —</span>
+      <span class="chip" id="battery-status">🔋</span>
+    </div>
+  </div>
+  <div style="margin-top:12px" class="stats">
+    <div class="stat"><div class="label">Time</div><div class="value" id="time">00:00:00</div></div>
+    <div class="stat"><div class="label">Distance</div><div class="value" id="distance">0.00 km</div></div>
+    <div class="stat"><div class="label">Speed</div><div class="value" id="speed">0.0 km/h</div></div>
+    <div class="stat"><div class="label">Pace</div><div class="value" id="pace">— min/km</div></div>
+    <div class="stat"><div class="label">Steps</div><div class="value" id="steps">0</div></div>
+    <div class="stat"><div class="label">Calories</div><div class="value" id="calories">0 kcal</div></div>
+  </div>
+  <div style="margin-top:12px">
+    <canvas id="speed-chart" width="900" height="160"></canvas>
+  </div>
+</section>
+
+<section class="history card">
+  <div class="inline" style="justify-content:space-between;align-items:baseline">
+    <h2 style="margin:0;font-size:1.1rem">History</h2>
+    <button class="btn danger" id="clear-history">🗑️ Clear History</button>
+  </div>
+  <div class="muted" style="margin:6px 0">Saved locally on your device.</div>
+  <div style="overflow:auto">
+    <table id="history-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Activity</th><th>Time</th><th>Distance</th><th>Speed</th><th>Steps</th><th>Calories</th><th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="footer">
+  <div>
+    <span class="badge">Tip: keep the screen on and phone in pocket/hand for better step detection.</span>
+  </div>
+  <div class="muted">No data leaves your device. Open-source style, single-file app.</div>
+</div>
+
+  </div>  <script>
+    // ===== Utilities =====
+    const $ = (sel)=>document.querySelector(sel);
+    const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
+    const fmtTime = (ms)=>{
+      const s=Math.floor(ms/1000); const h=Math.floor(s/3600); const m=Math.floor((s%3600)/60); const sec=s%60;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    }
+    const haversine = (a,b)=>{
+      const R=6371000; // meters
+      const toRad = d=>d*Math.PI/180;
+      const dLat=toRad(b.lat-a.lat); const dLon=toRad(b.lon-a.lon);
+      const lat1=toRad(a.lat); const lat2=toRad(b.lat);
+      const s= Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(s));
+    }
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // ===== State =====
+    const state = {
+      active:false, paused:false,
+      activity:'walk',
+      startTime:0, pauseAccum:0, lastPause:0,
+      distance:0, // meters
+      steps:0,
+      calories:0,
+      lastGPS:null, gpsWatch:null, minAcc:50,
+      speedKmh:0,
+      weightsKg: parseFloat(localStorage.getItem('ft_weight')||'70'),
+      theme: localStorage.getItem('ft_theme')||'dark',
+      speedSeries:[],
+      motion:{enabled:false, listener:null, sensitivity:5, lastPeak:0, ema:9.81, thresh:1.2}
+    }
+
+    // ===== UI Bind =====
+    const els = {
+      time:$('#time'), dist:$('#distance'), speed:$('#speed'), pace:$('#pace'), steps:$('#steps'), cal:$('#calories'),
+      gpsStatus:$('#gps-status'), motionStatus:$('#motion-status'), batteryStatus:$('#battery-status'),
+      start:$('#start'), pause:$('#pause'), resume:$('#resume'), stop:$('#stop'),
+      activity:$('#activity'), weight:$('#weight'), minAcc:$('#gps-accuracy'), sens:$('#step-sensitivity'),
+      export:$('#export-json'), clearH:$('#clear-history'), themeBtn:$('#toggle-theme'),
+      table:$('#history-table tbody'), canvas:document.getElementById('speed-chart')
+    }
+
+    // Apply theme
+    const applyTheme=()=>{document.documentElement.setAttribute('data-theme', state.theme==='light'?'light':'dark'); localStorage.setItem('ft_theme', state.theme)}
+    applyTheme();
+
+    // Prefill inputs
+    els.activity.value = localStorage.getItem('ft_activity')||'walk';
+    els.weight.value = isFinite(state.weightsKg)?state.weightsKg:'';
+    els.minAcc.value = localStorage.getItem('ft_minAcc')||'50';
+    els.sens.value = localStorage.getItem('ft_sens')||'5';
+
+    // ===== Drawing (simple sparkline) =====
+    const ctx = els.canvas.getContext('2d');
+    function drawSpeed(){
+      const W = els.canvas.width, H = els.canvas.height;
+      ctx.clearRect(0,0,W,H);
+      // grid
+      ctx.globalAlpha=0.25; ctx.beginPath();
+      for(let i=0;i<6;i++){ctx.moveTo(0,(H/5)*i); ctx.lineTo(W,(H/5)*i)}
+      ctx.strokeStyle='currentColor'; ctx.stroke(); ctx.globalAlpha=1;
+      const data = state.speedSeries.slice(-120); // last ~10 min if every 5s
+      if(data.length<2) return;
+      const max = Math.max(10, ...data); // avoid zero scaling
+      ctx.beginPath();
+      data.forEach((v,i)=>{
+        const x = (i/(data.length-1))*W;
+        const y = H - (v/max)*H;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      })
+      ctx.lineWidth=2.5; ctx.strokeStyle='currentColor'; ctx.stroke();
+    }
+
+    // ===== History =====
+    function saveHistory(entry){
+      const arr = JSON.parse(localStorage.getItem('ft_history')||'[]');
+      arr.unshift(entry);
+      localStorage.setItem('ft_history', JSON.stringify(arr));
+      renderHistory();
+    }
+    function renderHistory(){
+      const arr = JSON.parse(localStorage.getItem('ft_history')||'[]');
+      els.table.innerHTML = arr.map((r,idx)=>`<tr>
+        <td>${new Date(r.date).toLocaleString()}</td>
+        <td>${iconFor(r.activity)} ${r.activity}</td>
+        <td>${r.time}</td>
+        <td>${r.distance.toFixed(2)} km</td>
+        <td>${r.avgSpeed.toFixed(1)} km/h</td>
+        <td>${r.steps}</td>
+        <td>${Math.round(r.calories)} kcal</td>
+        <td><button class="btn" data-del="${idx}">Delete</button></td>
+      </tr>`).join('');
+      // bind delete
+      $$('button[data-del]').forEach(btn=>btn.onclick=()=>{
+        const i = parseInt(btn.getAttribute('data-del')); const a=JSON.parse(localStorage.getItem('ft_history')||'[]');
+        a.splice(i,1); localStorage.setItem('ft_history', JSON.stringify(a)); renderHistory();
+      })
+    }
+
+    function iconFor(act){ return act==='run'?'🏃': act==='cycle'?'🚴':'🚶' }
+
+    renderHistory();
+
+    // ===== Motion / Step detection =====
+    function enableMotion(){
+      if(state.motion.enabled) return;
+      const sens = Number(els.sens.value); state.motion.sensitivity = sens;
+      state.motion.thresh = 0.9 + (10 - sens)*0.12; // more sensitive => lower threshold
+
+      const handler = (ev)=>{
+        const a = ev.accelerationIncludingGravity || ev.acceleration || {x:0,y:0,z:0};
+        const mag = Math.sqrt((a.x||0)**2 + (a.y||0)**2 + (a.z||0)**2);
+        // Simple high-pass via EMA to remove gravity baseline
+        state.motion.ema = 0.9*state.motion.ema + 0.1*mag;
+        const hp = mag - state.motion.ema;
+        const now = performance.now();
+        // Peak detection with refractory ~250ms
+        if(hp > state.motion.thresh && (now - state.motion.lastPeak) > 250){
+          state.motion.lastPeak = now;
+          if(state.activity !== 'cycle'){
+            state.steps += 1;
+            els.steps.textContent = state.steps.toString();
+          }
+        }
+      }
+      state.motion.listener = handler;
+      window.addEventListener('devicemotion', handler, { passive:true });
+      state.motion.enabled = true;
+      els.motionStatus.textContent = '📱 Motion: ON';
+      els.motionStatus.style.borderColor = 'rgba(16,185,129,.6)';
+    }
+
+    function disableMotion(){
+      if(!state.motion.enabled) return;
+      window.removeEventListener('devicemotion', state.motion.listener);
+      state.motion.enabled=false; state.motion.listener=null;
+      els.motionStatus.textContent = '📱 Motion: OFF';
+      els.motionStatus.style.borderColor = '';
+    }
+
+    async function requestMotionPermission(){
+      try{
+        if(typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+          const res = await DeviceMotionEvent.requestPermission();
+          if(res==='granted') enableMotion(); else els.motionStatus.textContent = '📱 Motion: denied';
+        }else{ enableMotion(); }
+      }catch(e){ console.warn(e); els.motionStatus.textContent='📱 Motion: error'; }
+    }
+
+    // ===== GPS Tracking =====
+    function startGPS(){
+      if(!('geolocation' in navigator)){
+        els.gpsStatus.textContent = '📍 GPS: not available'; return;
+      }
+      els.gpsStatus.textContent = '📍 GPS: requesting…';
+      state.minAcc = Number(els.minAcc.value || 50);
+      state.gpsWatch = navigator.geolocation.watchPosition(pos=>{
+        const { latitude, longitude, accuracy, speed } = pos.coords;
+        els.gpsStatus.textContent = `📍 GPS: ±${Math.round(accuracy)}m`;
+        if(accuracy > state.minAcc) return; // ignore noisy points
+        const nowPt = {lat:latitude, lon:longitude, t:pos.timestamp};
+        if(state.lastGPS){
+          const d = haversine(state.lastGPS, nowPt); // meters
+          if(d < 0.5) { state.lastGPS = nowPt; return; } // ignore tiny jitter
+          state.distance += d;
+          // speed (m/s) from GPS if provided or compute
+          const dt = (nowPt.t - state.lastGPS.t)/1000;
+          const mps = isFinite(speed) && speed!=null ? speed : (dt>0? d/dt : 0);
+          state.speedKmh = clamp(mps*3.6, 0, 80);
+          state.speedSeries.push(state.speedKmh);
+          updateDerived();
+          drawSpeed();
+        }
+        state.lastGPS = nowPt;
+      }, err=>{
+        els.gpsStatus.textContent = `📍 GPS error: ${err.code}`;
+      }, { enableHighAccuracy:true, maximumAge:2000, timeout:15000 });
+    }
+
+    function stopGPS(){
+      if(state.gpsWatch!=null){ navigator.geolocation.clearWatch(state.gpsWatch); state.gpsWatch=null; }
+      state.lastGPS=null; els.gpsStatus.textContent='📍 GPS: —';
+    }
+
+    // ===== Calories, Pace, etc. =====
+    function MET(activity, speedKmh){
+      // Approx MET values; can refine with speed
+      if(activity==='cycle'){
+        if(speedKmh<16) return 4.0; if(speedKmh<19) return 6.0; if(speedKmh<22) return 8.0; if(speedKmh<25) return 10.0; return 12.0;
+      }
+      if(activity==='run'){
+        if(speedKmh<8) return 6.0; if(speedKmh<10) return 8.3; if(speedKmh<12) return 9.8; if(speedKmh<14) return 11.0; return 12.5;
+      }
+      // walk
+      if(speedKmh<3) return 2.0; if(speedKmh<4.5) return 3.3; if(speedKmh<5.5) return 3.8; if(speedKmh<6.5) return 4.3; return 5.0;
+    }
+
+    function updateDerived(){
+      const elapsed = (performance.now() - state.startTime - state.pauseAccum);
+      els.time.textContent = fmtTime(elapsed);
+      els.dist.textContent = (state.distance/1000).toFixed(2) + ' km';
+      els.speed.textContent = state.speedKmh.toFixed(1)+' km/h';
+      const paceMinPerKm = state.speedKmh>0 ? (60/state.speedKmh) : null;
+      els.pace.textContent = paceMinPerKm? `${Math.floor(paceMinPerKm)}:${String(Math.round((paceMinPerKm%1)*60)).padStart(2,'0')} min/km` : '— min/km';
+      els.steps.textContent = String(state.steps);
+      // calories = MET * weight(kg) * time(h)
+      const met = MET(state.activity, state.speedKmh);
+      const hours = Math.max(0, elapsed/3600000);
+      const kcal = met * (state.weightsKg||70) * hours;
+      state.calories = kcal;
+      els.cal.textContent = Math.round(kcal) + ' kcal';
+    }
+
+    let ticker=null;
+    function startTicker(){
+      if(ticker) cancelAnimationFrame(ticker);
+      const loop=()=>{ if(state.active && !state.paused){ updateDerived(); } ticker=requestAnimationFrame(loop) }
+      ticker=requestAnimationFrame(loop)
+    }
+    function stopTicker(){ if(ticker) cancelAnimationFrame(ticker); ticker=null; }
+
+    // ===== Session control =====
+    function resetSession(){
+      state.distance=0; state.steps=0; state.calories=0; state.speedKmh=0; state.speedSeries=[];
+      state.startTime=0; state.pauseAccum=0; state.lastPause=0;
+      updateDerived(); drawSpeed();
+    }
+
+    async function startSession(){
+      state.activity = els.activity.value; localStorage.setItem('ft_activity', state.activity);
+      state.weightsKg = parseFloat(els.weight.value)||70; localStorage.setItem('ft_weight', state.weightsKg);
+      localStorage.setItem('ft_minAcc', els.minAcc.value);
+      localStorage.setItem('ft_sens', els.sens.value);
+
+      resetSession();
+      state.active=true; state.paused=false; state.startTime=performance.now();
+      els.start.disabled=true; els.pause.disabled=false; els.stop.disabled=false; els.resume.disabled=true;
+
+      await requestMotionPermission();
+      startGPS();
+      startTicker();
+    }
+
+    function pauseSession(){
+      if(!state.active || state.paused) return;
+      state.paused=true; state.lastPause=performance.now();
+      els.pause.disabled=true; els.resume.disabled=false;
+    }
+
+    function resumeSession(){
+      if(!state.active || !state.paused) return;
+      state.paused=false; state.pauseAccum += (performance.now()-state.lastPause);
+      els.pause.disabled=false; els.resume.disabled=true;
+    }
+
+    function stopSession(){
+      if(!state.active) return;
+      state.active=false; els.start.disabled=false; els.pause.disabled=true; els.resume.disabled=true; els.stop.disabled=true;
+      stopGPS(); disableMotion(); stopTicker(); updateDerived();
+      const elapsed = (state.startTime? (performance.now()-state.startTime-state.pauseAccum):0);
+      const entry = {
+        date: Date.now(), activity: state.activity, time: fmtTime(elapsed),
+        distance: state.distance/1000, avgSpeed: (state.distance>0? (state.distance/elapsed)*3.6*1000 : 0),
+        steps: state.steps, calories: state.calories
+      };
+      if(elapsed>5000) saveHistory(entry);
+    }
+
+    // ===== Battery status (best-effort) =====
+    if(navigator.getBattery){
+      navigator.getBattery().then(b=>{
+        const upd=()=>{els.batteryStatus.textContent = `🔋 ${(b.level*100).toFixed(0)}%${b.charging?' ⚡':''}`}
+        upd(); ['levelchange','chargingchange'].forEach(e=>b.addEventListener(e,upd));
+      })
+    } else { els.batteryStatus.textContent='🔋 —' }
+
+    // ===== Events =====
+    els.start.onclick = startSession;
+    els.pause.onclick = pauseSession;
+    els.resume.onclick = resumeSession;
+    els.stop.onclick = stopSession;
+
+    els.themeBtn.onclick = ()=>{ state.theme = (state.theme==='dark'?'light':'dark'); applyTheme(); }
+    els.sens.oninput = ()=>{ if(state.motion.enabled){ disableMotion(); enableMotion(); } }
+
+    els.export.onclick = ()=>{
+      const data = localStorage.getItem('ft_history')||'[]';
+      const blob = new Blob([data], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='fittrack-history.json'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    els.clearH.onclick = ()=>{
+      if(confirm('Delete all saved sessions?')){ localStorage.removeItem('ft_history'); renderHistory(); }
+    }
+
+    // housekeeping when leaving
+    window.addEventListener('beforeunload', ()=>{ if(state.active) stopSession(); });
+
+    // Initial derived values
+    updateDerived(); drawSpeed();
+  </script></body>
+</html>
